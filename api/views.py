@@ -14,6 +14,7 @@ from processor import processPayment
 
 import json
 
+# done
 class ListCreateEBTCard(APIView):
     """ Exposes the following routes,
     
@@ -38,7 +39,7 @@ class ListCreateEBTCard(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-
+# done
 class RetrieveDeleteEBTCard(APIView):
     """ Exposes the following routes,
     
@@ -68,7 +69,7 @@ class RetrieveDeleteEBTCard(APIView):
 
 
 
-
+# done
 class ListCreateCreditCard(ListCreateAPIView):
     """ Exposes the following routes,
     
@@ -86,13 +87,14 @@ class ListCreateCreditCard(ListCreateAPIView):
     
     # This is the way to call POST request in django 
 
-    def post(self, request, *args, **kwargs):
-        queryset = CreditCard.objects.all()
-        serializer_class = CreditCardSerializer
-        serializer = serializer_class(queryset, many=True)
-        return Response(serializer.data)
+    def post(self, request, format=None):
+        serializer = CreditCardSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
+# done
 class RetrieveDeleteCreditCard(RetrieveDestroyAPIView):
     """ Exposes the following routes,
     
@@ -100,21 +102,57 @@ class RetrieveDeleteCreditCard(RetrieveDestroyAPIView):
     2. DELETE http://localhost:8000/api/credit_cards/:id/ <- deletes a CreditCard object by id.
 
     """
-    queryset = CreditCard.objects.all()
-    serializer_class = CreditCardSerializer
+    def get(self, request, *args, **kwargs):
+        card_id = self.kwargs['id']  # Access the ID passed in the URL
+        try:
+            queryset = CreditCard.objects.get(id=card_id)  # Retrieve the card by ID
+            serializer = CreditCardSerializer(queryset)  # Use serializer for a single object
+            return Response(serializer.data)
+        except CreditCard.DoesNotExist:
+            return Response({"detail": "CreditCard not found."}, status=status.HTTP_404_NOT_FOUND)
+    
+
+    def delete(self, request, *args, **kwargs):
+        card_id = self.kwargs['id']  
+        try:
+            credit_card = CreditCard.objects.get(id=card_id)
+            credit_card.delete()
+            return Response({"detail": "CreditCard deleted."}, status=status.HTTP_204_NO_CONTENT)
+        except EBTCard.DoesNotExist:
+            return Response({"detail": "CreditCard not found."}, status=status.HTTP_404_NOT_FOUND)
 
 
+# done
 class ListCreateOrder(ListCreateAPIView):
     """ Exposes the following routes,
     
     1. GET http://localhost:8000/api/orders/ <- returns a list of all Order objects
-    2. POST http://localhost:8000/api/ordersr/ <- creates a single Order object and returns it
+    2. POST http://localhost:8000/api/orders/ <- creates a single Order object and returns it
 
     """
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
 
+     # This is the way to call GET request in django 
 
+    def get(self, request, *args, **kwargs):
+        queryset = Order.objects.all()
+        serializer_class = OrderSerializer
+        serializer = serializer_class(queryset, many=True)
+        return Response(serializer.data)
+    
+    # This is the way to call POST request in django 
+
+    def post(self, request, format=None):
+        serializer = OrderSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+# done
 class RetrieveDeleteOrder(RetrieveDestroyAPIView):
     """ Exposes the following routes,
     
@@ -125,7 +163,29 @@ class RetrieveDeleteOrder(RetrieveDestroyAPIView):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
 
+    def get(self, request, *args, **kwargs):
+        order_id = self.kwargs['id']  # Access the ID passed in the URL
+        try:
+            queryset = Order.objects.get(id=order_id)  # Retrieve the card by ID
+            serializer = OrderSerializer(queryset)  # Use serializer for a single object
+            return Response(serializer.data)
+        except Order.DoesNotExist:
+            return Response({"detail": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
+    
 
+    def delete(self, request, *args, **kwargs):
+        order_id = self.kwargs['id']  
+        try:
+            oorder = Order.objects.get(id=order_id)
+            oorder.delete()
+            return Response({"detail": "Order deleted."}, status=status.HTTP_204_NO_CONTENT)
+        except EBTCard.DoesNotExist:
+            return Response({"detail": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
+
+
+
+
+# not done
 class ListCreatePayment(ListCreateAPIView):
     """ Exposes the following routes,
     
@@ -137,6 +197,7 @@ class ListCreatePayment(ListCreateAPIView):
     serializer_class = PaymentSerializer
 
 
+# not done
 class RetrieveDeletePayment(RetrieveDestroyAPIView):
     """ Exposes the following routes,
     
@@ -148,6 +209,7 @@ class RetrieveDeletePayment(RetrieveDestroyAPIView):
     serializer_class = PaymentSerializer
 
 
+# not done
 class CaptureOrder(APIView):
     """ Provided an Order's id, submit all associated payments to the payment processor.
 

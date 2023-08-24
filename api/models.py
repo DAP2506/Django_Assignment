@@ -1,6 +1,9 @@
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
+
 
 def validateMonth(value):
     if not (1 <= value <= 12):
@@ -114,9 +117,10 @@ class Payment(models.Model):
     )
 
     description = models.CharField(max_length=255)
-    payment_method = models.ForeignKey(
-        CreditCard, on_delete=models.DO_NOTHING
-    )
+
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    payment_method_id = models.PositiveIntegerField()
+    payment_method = GenericForeignKey('content_type', 'payment_method_id')
 
     # Constants for payment statuses
     TYPE_REQ_CONF = "requires_confirmation"
