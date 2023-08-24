@@ -9,6 +9,37 @@ def validateMonth(value):
         )
     return value
 
+
+def validate_number_length(value):
+    if not 16 <= len(value) <= 19:
+        raise ValidationError('Number length must be between 16 and 19 characters.')
+
+class EBTCard(models.Model):
+    number = models.CharField(
+        max_length=19, 
+        default="4111111111111111",
+        validators=[validate_number_length]  # Add the custom validator
+    )
+    last_4 = models.CharField(max_length=4)
+    
+    # Constants for card brands that ACME supports
+    TYPE_AMEX = "amex"
+    TYPE_DISCOVER = "discover"
+    TYPE_MASTERCARD = "mastercard"
+    TYPE_VISA = "visa"
+    CARD_BRAND_CHOICE = (
+        (TYPE_AMEX, "Amex"),
+        (TYPE_DISCOVER, "Discover"),
+        (TYPE_MASTERCARD, "Mastercard"),
+        (TYPE_VISA, "Visa"),
+    )
+
+    brand = models.CharField(max_length=255, choices=CARD_BRAND_CHOICE)
+    
+    # exp_month = models.PositiveSmallIntegerField(validators=[validateMonth])
+    # exp_year = models.PositiveSmallIntegerField() # 2 digits, e.g. 26 instead of 2026
+
+
 class CreditCard(models.Model):
     number = models.CharField(
         max_length=17, default="4111111111111111"

@@ -7,6 +7,16 @@ app_name = "api"
 
 urlpatterns = [
     path(
+        "ebt_cards/<int:id>", 
+        views.RetrieveDeleteEBTCard.as_view(),
+        name="ebt-cards-retrieve-delete",
+    ),
+    path(
+        "ebt_cards/", 
+        views.ListCreateEBTCard.as_view(),
+        name="ebt-cards-list-create",
+    ),
+    path(
         "credit_cards/",
         views.ListCreateCreditCard.as_view(),
         name="credit-cards-list-create",

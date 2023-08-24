@@ -8,9 +8,66 @@ from rest_framework.generics import ListCreateAPIView, RetrieveDestroyAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from api.models import Payment, CreditCard, Order
-from api.serializers import PaymentSerializer, CreditCardSerializer, OrderSerializer
+from api.models import Payment, CreditCard, Order, EBTCard
+from api.serializers import PaymentSerializer, CreditCardSerializer, OrderSerializer, EBTCardSerializer
 from processor import processPayment
+
+import json
+
+class ListCreateEBTCard(APIView):
+    """ Exposes the following routes,
+    
+    1. GET http://localhost:8000/api/ebt_cards/ <- returns a list of all EBTCard objects
+    2. POST http://localhost:8000/api/ebt_cards/ <- creates a single EBTCard object and returns it
+
+    """
+    # This is the way to call GET request in django 
+
+    def get(self, request, format=None):
+        queryset = EBTCard.objects.all()
+        serializer = EBTCardSerializer(queryset, many=True)
+        return Response(serializer.data)
+    
+    # This is the way to call POST request in django 
+
+    def post(self, request, format=None):
+        serializer = EBTCardSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+class RetrieveDeleteEBTCard(APIView):
+    """ Exposes the following routes,
+    
+    1. GET http://localhost:8000/api/ebt_cards/:id/ <- returns a EBTCard object provided its id.
+    2. DELETE http://localhost:8000/api/ebt_cards/:id/ <- deletes a EBTCard object by id.
+
+    """
+
+    def get(self, request, *args, **kwargs):
+        card_id = self.kwargs['id']  # Access the ID passed in the URL
+        try:
+            queryset = EBTCard.objects.get(id=card_id)  # Retrieve the card by ID
+            serializer = EBTCardSerializer(queryset)  # Use serializer for a single object
+            return Response(serializer.data)
+        except EBTCard.DoesNotExist:
+            return Response({"detail": "EBTCard not found."}, status=status.HTTP_404_NOT_FOUND)
+    
+
+    def delete(self, request, *args, **kwargs):
+        card_id = self.kwargs['id']  
+        try:
+            ebt_card = EBTCard.objects.get(id=card_id)
+            ebt_card.delete()
+            return Response({"detail": "EBTCard deleted."}, status=status.HTTP_204_NO_CONTENT)
+        except EBTCard.DoesNotExist:
+            return Response({"detail": "EBTCard not found."}, status=status.HTTP_404_NOT_FOUND)
+
+
+
 
 class ListCreateCreditCard(ListCreateAPIView):
     """ Exposes the following routes,
@@ -19,8 +76,21 @@ class ListCreateCreditCard(ListCreateAPIView):
     2. POST http://localhost:8000/api/credit_cards/ <- creates a single CreditCard object and returns it
 
     """
-    queryset = CreditCard.objects.all()
-    serializer_class = CreditCardSerializer
+    # This is the way to call GET request in django 
+
+    def get(self, request, *args, **kwargs):
+        queryset = CreditCard.objects.all()
+        serializer_class = CreditCardSerializer
+        serializer = serializer_class(queryset, many=True)
+        return Response(serializer.data)
+    
+    # This is the way to call POST request in django 
+
+    def post(self, request, *args, **kwargs):
+        queryset = CreditCard.objects.all()
+        serializer_class = CreditCardSerializer
+        serializer = serializer_class(queryset, many=True)
+        return Response(serializer.data)
 
 
 class RetrieveDeleteCreditCard(RetrieveDestroyAPIView):
