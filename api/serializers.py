@@ -69,7 +69,7 @@ class PaymentSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
 
-        # print("validated_data: ", validated_data)
+        print("validated_data: ", validated_data)
 
         order = validated_data.pop('order')
         amount = validated_data.pop('amount')
@@ -78,29 +78,16 @@ class PaymentSerializer(serializers.ModelSerializer):
         payment_card = self.initial_data.get('payment_card')
         payment_method = self.initial_data.get('payment_method')
 
-        # print("request_data: ", order, amount, description, status, payment_card, payment_method)  
-
-        content_types = ContentType.objects.all()
-        model = None
-        model_index = 0
-        for content_type in content_types:
-            if content_type.model == payment_card:
-                model = content_type.model_class()
-                model_index = content_type.id
-                break
-
-        content_type = ContentType.objects.get_for_id(model_index)
         
-        print("content_type: ", content_type)
-
         if  payment_card == "creditcard":
+            content_type = ContentType.objects.get_for_model(CreditCard)
             payment_method = CreditCard.objects.get(pk=payment_method)
         elif payment_card == "ebtcard": 
+            content_type = ContentType.objects.get_for_model(EBTCard)
             payment_method = EBTCard.objects.get(pk=payment_method)
         
-        payment = Payment.objects.create(order=order, amount=amount, description=description, status=status, payment_method=payment_method, content_type=content_type, **validated_data)
 
-        print("payment: ", payment)
+        payment = Payment.objects.create(order=order, amount=amount, description=description, status=status, payment_method=payment_method, content_type=content_type, **validated_data)
         return payment
 
 

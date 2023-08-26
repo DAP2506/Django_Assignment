@@ -234,7 +234,6 @@ class RetrieveDeletePayment(RetrieveDestroyAPIView):
     """
     # queryset = Payment.objects.all()
     # serializer_class = PaymentSerializer
-    print('HI')
     def get(self, request, *args, **kwargs):
         payment_id = self.kwargs['id']
         try:
