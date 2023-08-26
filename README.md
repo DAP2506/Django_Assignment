@@ -1,18 +1,18 @@
 # My Time Logs for this project
 
-23-08-2023:
-11:00 PM - 	12:00 PM	=>  	Learning Django and python basics
+- 23-08-2023:  
+     - 11:00 PM - 	12:00 PM	=>  	Learning Django and Python basics
 
-24-08-2023:
-6:00 PM - 7:00 PM       =>      Made EBTCard Model , serializer 
-7:00 PM - 8:30 PM       =>      added get and post requests for /credit_cards/ and /ebt_cards 
-10:30 PM - 12:00 PM     =>      added get and post requests for /orders and /payments and started thinking about 2nd step solution
+- 24-08-2023:
+    - 6:00 PM - 7:00 PM       =>      Made EBTCard Model, serializer 
+    - 7:00 PM - 8:30 PM       =>      added get and post requests for /credit_cards/ and /ebt_cards 
+    - 10:30 PM - 12:00 PM     =>      added to get and post requests for /orders and /payments and started thinking about 2nd step solution
 
-26-08-2023:
-9:00 AM - 11:30 AM      =>      making changes in payment serializer for step 2
-8:00 PM - 9:00 PM       =>      resolving errors in step2 in serializer and completing step2
-9:30 PM - 11:30 PM      =>      added database constraint for order model and check the condition for ebt_total
-11:30 PM ->             =>      writing logs
+- 26-08-2023:
+    - 9:00 AM - 11:30 AM      =>      making changes in payment serializer for step 2
+    - 8:00 PM - 9:00 PM       =>      resolving errors in step2 in serializer and completing step2
+    - 9:30 PM - 11:30 PM      =>      Added database constraint for order model and checked the condition for ebt_total
+    - 11:30 PM ->             =>      writing logs
 
 
 
