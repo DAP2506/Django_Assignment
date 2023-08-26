@@ -7,10 +7,10 @@ from rest_framework import status
 from rest_framework.generics import ListCreateAPIView, RetrieveDestroyAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
 from api.models import Payment, CreditCard, Order, EBTCard
 from api.serializers import PaymentSerializer, CreditCardSerializer, OrderSerializer, EBTCardSerializer
 from processor import processPayment
+from django.contrib.contenttypes.models import ContentType
 
 import json
 
@@ -103,7 +103,7 @@ class RetrieveDeleteCreditCard(RetrieveDestroyAPIView):
 
     """
     def get(self, request, *args, **kwargs):
-        card_id = self.kwargs['id']  # Access the ID passed in the URL
+        card_id = self.kwargs['pk']  # Access the ID passed in the URL
         try:
             queryset = CreditCard.objects.get(id=card_id)  # Retrieve the card by ID
             serializer = CreditCardSerializer(queryset)  # Use serializer for a single object
@@ -113,12 +113,12 @@ class RetrieveDeleteCreditCard(RetrieveDestroyAPIView):
     
 
     def delete(self, request, *args, **kwargs):
-        card_id = self.kwargs['id']  
+        card_id = self.kwargs['pk']  
         try:
             credit_card = CreditCard.objects.get(id=card_id)
             credit_card.delete()
-            return Response({"detail": "CreditCard deleted."}, status=status.HTTP_204_NO_CONTENT)
-        except EBTCard.DoesNotExist:
+            return Response({"detail": "C4reditCard deleted."}, status=status.HTTP_204_NO_CONTENT)
+        except CreditCard.DoesNotExist:
             return Response({"detail": "CreditCard not found."}, status=status.HTTP_404_NOT_FOUND)
 
 
@@ -130,12 +130,11 @@ class ListCreateOrder(ListCreateAPIView):
     2. POST http://localhost:8000/api/orders/ <- creates a single Order object and returns it
 
     """
-    queryset = Order.objects.all()
-    serializer_class = OrderSerializer
-
-     # This is the way to call GET request in django 
+    
+    # This is the way to call GET request in django 
 
     def get(self, request, *args, **kwargs):
+        print("GET request from /api/orders/ ")
         queryset = Order.objects.all()
         serializer_class = OrderSerializer
         serializer = serializer_class(queryset, many=True)
@@ -185,7 +184,7 @@ class RetrieveDeleteOrder(RetrieveDestroyAPIView):
 
 
 
-# not done
+# done
 class ListCreatePayment(ListCreateAPIView):
     """ Exposes the following routes,
     
@@ -193,8 +192,36 @@ class ListCreatePayment(ListCreateAPIView):
     2. POST http://localhost:8000/api/payments/ <- creates a single Payment object and associates it with the Order in the request body.
 
     """
-    queryset = Payment.objects.all()
-    serializer_class = PaymentSerializer
+    # queryset = Payment.objects.all()
+    # serializer_class = PaymentSerializer
+    
+
+    def create(self, validated_data):
+        order_id = validated_data.pop('order_id')
+        order = Order.objects.get(pk=order_id)
+        payment = Payment.objects.create(order=order, **validated_data)
+        return payment
+
+
+    def get(self, request, *args, **kwargs):
+        queryset = Payment.objects.all()
+        serializer_class = PaymentSerializer
+        serializer = serializer_class(queryset, many=True)
+        return Response(serializer.data)
+    
+
+
+    def post(self, request, *args, **kwargs):
+
+        serializer = PaymentSerializer(data=request.data)
+
+        if serializer.is_valid():
+            payment = serializer.save()
+            return Response({'message': 'Payment created successfully', 'payment_id': payment.id}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        
+    
 
 
 # not done
@@ -205,11 +232,31 @@ class RetrieveDeletePayment(RetrieveDestroyAPIView):
     2. DELETE http://localhost:8000/api/payments/:id/ <- deletes a Payment object by id.
 
     """
-    queryset = Payment.objects.all()
-    serializer_class = PaymentSerializer
+    # queryset = Payment.objects.all()
+    # serializer_class = PaymentSerializer
+    print('HI')
+    def get(self, request, *args, **kwargs):
+        payment_id = self.kwargs['id']
+        try:
+            queryset = Payment.objects.get(id=payment_id)
+            serializer = PaymentSerializer(queryset)
+            return Response(serializer.data)
+        except Payment.DoesNotExist:
+            return Response({"detail": "Payment not found."}, status=status.HTTP_404_NOT_FOUND)
+    
+    def delete(self, request, *args, **kwargs):
+        
+        payment_id = self.kwargs['id']  
+        try:
+            ppayment = Order.objects.get(id=payment_id)
+            ppayment.delete()
+            return Response({"detail": "payment deleted."}, status=status.HTTP_204_NO_CONTENT)
+        except EBTCard.DoesNotExist:
+            return Response({"detail": "payment not found."}, status=status.HTTP_404_NOT_FOUND)
+    
 
 
-# not done
+# done
 class CaptureOrder(APIView):
     """ Provided an Order's id, submit all associated payments to the payment processor.
 
@@ -228,12 +275,32 @@ class CaptureOrder(APIView):
             # Find all Payments associated with this Order via /api/payments/
             payment_queryset = Payment.objects.filter(order__id=id)
 
+        
+            # print("PAYMENT QUERYSET: ",payment_queryset) 
+            # for payments in payment_queryset:
+            #     if payments.payment_card == 'ebtcard':
+            #         print("EBT PAYMENTS: ",payments.amount)
+            #     else:
+            #         print("CREDIT PAYMENTS: ",payments.amount)
+
             # Payments must satisfy the order_total
             total_payment_amount = sum([x.amount for x in payment_queryset])
             if total_payment_amount != order_obj.order_total:
+                print("Total payment amount: ", total_payment_amount)
+                print("Order total: ", order_obj.order_total)
                 return Response({
                     "error_message": "Payment total does not match order total for Order with id {}".format(id)
                 }, status=status.HTTP_400_BAD_REQUEST)
+
+            
+            # Payments must satisfy the EBT total
+
+            
+            ebt_payments_amount = sum([payment.amount for payment in payment_queryset if payment.content_type.model == 'ebtcard'])
+            print("EBT PAYMENTS AMOUNT: ",ebt_payments_amount)
+            if ebt_payments_amount > order_obj.ebt_total:
+                return Response({"error_message": "Total amount of payments with EBT cards exceeds EBT eligibility for Order with id {}".format(id)}, status=status.HTTP_400_BAD_REQUEST)
+
 
             potential_errors = []
             for payment in payment_queryset:

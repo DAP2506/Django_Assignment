@@ -42,7 +42,7 @@ urlpatterns = [
         name="payments-list-create",
     ),
     path(
-        "payments/<int:pk>/",
+        "payments/<int:id>/",
         views.RetrieveDeletePayment.as_view(),
         name="payments-retrieve-delete",
     ),

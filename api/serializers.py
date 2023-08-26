@@ -1,21 +1,9 @@
 from rest_framework import serializers
 from rest_framework import viewsets
-
 from api.models import CreditCard, Payment, Order, EBTCard
-
-
-class PaymentMethodField(serializers.PrimaryKeyRelatedField):
-    def get_queryset(self):
-        return CreditCard.objects.all() | EBTCard.objects.all()
-
-    def to_representation(self, value):
-        if isinstance(value, CreditCard):
-            return CreditCardSerializer(value).data
-        elif isinstance(value, EBTCard):
-            return EBTCardSerializer(value).data
-        else:
-            raise Exception('Unexpected type of tagged object')
-
+from itertools import chain
+from django.db.models import QuerySet
+from django.contrib.contenttypes.models import ContentType
 
 
 class EBTCardSerializer(serializers.ModelSerializer):
@@ -47,11 +35,23 @@ class OrderSerializer(serializers.ModelSerializer):
             "order_total",
             "status",
             "success_date",
-            # "ebt_total",
+            "ebt_total",
         ]
 
+
+
+
 class PaymentSerializer(serializers.ModelSerializer):
-    
+    payment_method = serializers.SerializerMethodField()
+    def get_payment_method(self, obj):
+        if isinstance(obj.payment_method, CreditCard):
+            return CreditCardSerializer(obj.payment_method).data
+        elif isinstance(obj.payment_method, EBTCard):
+            return EBTCardSerializer(obj.payment_method).data
+        raise serializers.ValidationError("Unexpected type of payment method")
+
+
+    # print("PAYMENT SERIALIZER: ",payment_method) 
     class Meta:
         model = Payment
         fields = [
@@ -59,36 +59,49 @@ class PaymentSerializer(serializers.ModelSerializer):
             "order",
             "amount",
             "description",
-            "payment_method",
+            "payment_method", 
+            "payment_method_id", 
+            "content_type", 
             "status",
             "success_date",
-            "last_processing_error"
+            "last_processing_error",
         ]
+    
+    def create(self, validated_data):
+
+        # print("validated_data: ", validated_data)
+
+        order = validated_data.pop('order')
+        amount = validated_data.pop('amount')
+        description = validated_data.pop('description')
+        status = validated_data.pop('status')
+        payment_card = self.initial_data.get('payment_card')
+        payment_method = self.initial_data.get('payment_method')
+
+        # print("request_data: ", order, amount, description, status, payment_card, payment_method)  
+
+        content_types = ContentType.objects.all()
+        model = None
+        model_index = 0
+        for content_type in content_types:
+            if content_type.model == payment_card:
+                model = content_type.model_class()
+                model_index = content_type.id
+                break
+
+        content_type = ContentType.objects.get_for_id(model_index)
+        
+        print("content_type: ", content_type)
+
+        if  payment_card == "creditcard":
+            payment_method = CreditCard.objects.get(pk=payment_method)
+        elif payment_card == "ebtcard": 
+            payment_method = EBTCard.objects.get(pk=payment_method)
+        
+        payment = Payment.objects.create(order=order, amount=amount, description=description, status=status, payment_method=payment_method, content_type=content_type, **validated_data)
+
+        print("payment: ", payment)
+        return payment
 
 
-
-
-class PaymentViewSet(viewsets.ModelViewSet):
-    queryset = Payment.objects.all()  # Or whatever queryset you need
-    serializer_class = PaymentSerializer
-
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        context['payment_method_queryset'] = CreditCard.objects.all() | EBTCard.objects.all()
-        return context
-
-# class PaymentSerializer(serializers.ModelSerializer):
-#     payment_method = PaymentMethodField(queryset=CreditCard.objects.all() | EBTCard.objects.all(), allow_null=True)
-
-#     class Meta:
-#         model = Payment
-#         fields = [
-#             "id",
-#             "order", # The id of the associated Order object
-#             "amount",
-#             "description",
-#             "payment_method", # The id of the associated CreditCard object or edbtcard object
-#             "status",
-#             "success_date",
-#             "last_processing_error"
-#         ]
+    

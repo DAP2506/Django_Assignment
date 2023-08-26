@@ -3,6 +3,7 @@ from django.core.validators import MinValueValidator
 from django.db import models
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+# from django.db import models, CheckConstraint, Q, F
 
 
 def validateMonth(value):
@@ -21,7 +22,7 @@ class EBTCard(models.Model):
     number = models.CharField(
         max_length=19, 
         default="4111111111111111",
-        validators=[validate_number_length]  # Add the custom validator
+        validators=[validate_number_length]  # Added the custom validator
     )
     last_4 = models.CharField(max_length=4)
     
@@ -100,9 +101,18 @@ class Order(models.Model):
     #
     # The amount which can be paid for with EBT. It's not necessarily true that the
     # entire ebt_total will be satisfied with EBT tender.
-    # ebt_total = models.DecimalField(
-    #     decimal_places=2, max_digits=12, validators=[MinValueValidator(0)]
-    # )
+
+    ebt_total = models.DecimalField(
+        decimal_places=2, max_digits=12, validators=[MinValueValidator(0)]
+    )
+
+    # adding database contraints for order_total >= ebt_total
+    def save(self, *args, **kwargs):
+        if(self.order_total >= self.ebt_total):
+            super(Order, self).save(*args, **kwargs)
+        else:
+            raise Exception("ebt total cannot be greater than order total")
+
 
 class Payment(models.Model):
     order = models.ForeignKey(
@@ -117,10 +127,29 @@ class Payment(models.Model):
     )
 
     description = models.CharField(max_length=255)
+    
+    content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.CASCADE,
+        default=1,
+    )
 
-    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
-    payment_method_id = models.PositiveIntegerField()
+    payment_method_id = models.PositiveIntegerField(default=1)
     payment_method = GenericForeignKey('content_type', 'payment_method_id')
+
+    TYPE_CREDITCARD = "creditcard"
+    TYPE_EBTCARD = "ebtcard"
+    PAYMENT_METHOD_CHOICE = (
+        (TYPE_CREDITCARD, "creditcard"),
+        (TYPE_EBTCARD, "ebtcard"),
+    )
+
+    payment_card = models.CharField(
+        max_length=10, 
+        choices=PAYMENT_METHOD_CHOICE, 
+        default=TYPE_CREDITCARD
+    )
+    
 
     # Constants for payment statuses
     TYPE_REQ_CONF = "requires_confirmation"
@@ -145,3 +174,37 @@ class Payment(models.Model):
     )
 
     last_processing_error = models.TextField(null=True, blank=True)
+
+    # def save(self, *args, **kwargs):
+    #     content_type = None
+        
+    #     if self.payment_method:
+    #         print("my payment method : ", self.payment_method)
+    #         if self.payment_card == "creditcard":
+    #             print("my payment card : ", self.payment_card)
+    #             if isinstance(self.payment_method, CreditCard):
+    #                 content_type = ContentType.objects.get_for_model(CreditCard)
+    #         elif isinstance(self.payment_method, EBTCard):
+    #             content_type = ContentType.objects.get_for_model(EBTCard)
+        
+    #     if content_type:
+    #         self.content_type = content_type
+    #         self.payment_method_id = self.payment_method
+
+    #     super().save(*args, **kwargs)
+
+
+    def save(self, *args, **kwargs):
+
+        if self.payment_method:
+            if isinstance(self.payment_method, CreditCard):
+                self.content_type = ContentType.objects.get_for_model(CreditCard)
+            elif isinstance(self.payment_method, EBTCard):
+                self.content_type = ContentType.objects.get_for_model(EBTCard)
+            self.payment_method_id = self.payment_method.id
+        super().save(*args, **kwargs)
+
+
+
+
+    

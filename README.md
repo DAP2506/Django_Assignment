@@ -75,7 +75,7 @@ There are 4 high level changes you will need to make to this codebase,
 3. Add error checking for EBT eligibility to the Order capture view (see line 99)
     - First uncomment the ebt_total field on the Order model. This field will track the EBT eligibility of items in the Order and you can assume it is provided accurately by API clients. 
     - Make sure you uncomment ebt_total in the OrderSerializer class as well!
-    - Add a database constraint such that the snap_total is always less than the order_total
+    - Add a database constraint such that the ebt_total is always less than the order_total
     - Finally, add logic to ensure that the sum of the amount fields of Payments to EBT cards is less than the ebt_total of the Order object.
 4. Update the fixtures to demonstrate the request bodies after your API changes as needed
 
